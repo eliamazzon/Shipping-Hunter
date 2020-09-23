@@ -32,14 +32,13 @@ def range_adapter(rango1): #let's find a better way'
         return r1_0, r1_2
 
 def main(kws,ipg,pgn):
-    link = f"https://www.ebay.com/sch/i.html?_nkw={kws}&_ipg={ipg}&_pgn={pgn}"  
-    page = requests.get2str(link)
-    #print(type(page))
-
+    #start_time1 = time.time()
+    page = requests.get2str(f"https://www.ebay.com/sch/i.html?_nkw={kws}&_ipg={ipg}&_pgn={pgn}")
+    
     soup = FastSoup(page) 
     a = soup.find_all('a', class_='s-item__link')
 
-    links = [] #just the first page, iterate with the others
+    links = [] 
 
     for l in a:
         l.get("href")
@@ -47,26 +46,22 @@ def main(kws,ipg,pgn):
 
     print(len(links))
     reqs = (grequests.get(link) for link in links)
-    try:
-        page = grequests.imap(reqs, grequests.Pool(10))
-    except Exception as e: 
-        print(e)
-        pass    
+    page = grequests.map(reqs)
 
     n = 0
     itms = {}
 
     for p in page:
-    
+        
         l = links[n]
         item_l = l.split("/")
         item_index = (item_l.index("itm") + 1)
         item = item_l[item_index]
             
         soup = FastSoup(p.text) 
-        span = soup.find_all('span', class_='vi-acc-del-range')
+        span = soup.find('span', class_='vi-acc-del-range')
         try:
-            b = span[0].find("b")  
+            b = span.find("b")  
             delivery = (b.get_text()).split(" ")
             rango1 = [delivery[1],delivery[2],delivery[5],delivery[6]]
             rng = range_adapter(rango1)
@@ -79,7 +74,10 @@ def main(kws,ipg,pgn):
             pass
         
         n += 1
+    
     Q.put(itms)
+    #print("--- %s seconds ---" % (time.time() - start_time1))
+
     
 Q = Queue()
 
@@ -92,7 +90,7 @@ pgs = 10
 processes = []
 
 for pgn in range(pgs):
-    p = multiprocessing.Process(target = main,args = (kws, ipg, pgn))
+    p = multiprocessing.Process(target = main,args = (kws, ipg, pgn+1))
     p.start()
     processes.append(p)
 
@@ -105,8 +103,8 @@ for process in processes:
 
 sort_items = sorted(items.items(), key=lambda x: x[1])
 
-for i in sort_items:
-    print(i[0],f"\n{i[1]}", "\n")
+#for i in sort_items:
+    #print(i[0],f"\n{i[1]}", "\n")
     # add product link & try to filter results to make them relevant
 print(len(items))
 #playsound.playsound('4.mp3', True)
