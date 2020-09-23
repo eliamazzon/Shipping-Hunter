@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 import gevent.monkey
 gevent.monkey.patch_all()
-import requests
+import faster_than_requests as requests
 import time
 import playsound
 import grequests
-from bs4 import BeautifulSoup
+from fast_soup import FastSoup
 from selectolax.parser import HTMLParser
 from multiprocessing import Process, Queue
 import multiprocessing
@@ -33,15 +33,16 @@ def range_adapter(rango1): #let's find a better way'
 
 def main(kws,ipg,pgn):
     link = f"https://www.ebay.com/sch/i.html?_nkw={kws}&_ipg={ipg}&_pgn={pgn}"  
-    page = requests.get(link) #1.5
+    page = requests.get2str(link)
+    #print(type(page))
 
-    soup = BeautifulSoup(page.text,"lxml") 
+    soup = FastSoup(page) 
     a = soup.find_all('a', class_='s-item__link')
 
     links = [] #just the first page, iterate with the others
 
     for l in a:
-        l.find(href=True)
+        l.get("href")
         links.append(l.get("href"))
 
     print(len(links))
@@ -62,7 +63,7 @@ def main(kws,ipg,pgn):
         item_index = (item_l.index("itm") + 1)
         item = item_l[item_index]
             
-        soup = BeautifulSoup(p.text, 'lxml') 
+        soup = FastSoup(p.text) 
         span = soup.find_all('span', class_='vi-acc-del-range')
         try:
             b = span[0].find("b")  
@@ -83,7 +84,7 @@ def main(kws,ipg,pgn):
 Q = Queue()
 
 
-kws = input("type keywords here: ")
+kws = "iphone"#input("type keywords here: ")
 start_time = time.time()
 ipg = 25
 pgs = 10
@@ -108,7 +109,7 @@ for i in sort_items:
     print(i[0],f"\n{i[1]}", "\n")
     # add product link & try to filter results to make them relevant
 print(len(items))
-playsound.playsound('4.mp3', True)
+#playsound.playsound('4.mp3', True)
 print("--- %s seconds ---" % (time.time() - start_time))
 
 
