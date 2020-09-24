@@ -3,10 +3,8 @@ import gevent.monkey
 gevent.monkey.patch_all()
 import faster_than_requests as requests
 import time
-import playsound
 import grequests
 from fast_soup import FastSoup
-from selectolax.parser import HTMLParser
 from multiprocessing import Process, Queue
 import multiprocessing
 
@@ -31,32 +29,24 @@ def range_adapter(rango1): #let's find a better way'
         
         return r1_0, r1_2
 
-def main(kws,ipg,pgn):
+def ebay(kws,ipg,pgn):
     #start_time1 = time.time()
     page = requests.get2str(f"https://www.ebay.com/sch/i.html?_nkw={kws}&_ipg={ipg}&_pgn={pgn}")
-    
+   
     soup = FastSoup(page) 
     a = soup.find_all('a', class_='s-item__link')
-
-    links = [] 
-
-    for l in a:
-        l.get("href")
-        links.append(l.get("href"))
-
+    links = [l.get("href") for l in a] 
     print(len(links))
+    
     reqs = (grequests.get(link) for link in links)
-    page = grequests.map(reqs)
+    pages = grequests.map(reqs)
 
     n = 0
     itms = {}
+    for p in pages:
 
-    for p in page:
-        
-        l = links[n]
-        item_l = l.split("/")
-        item_index = (item_l.index("itm") + 1)
-        item = item_l[item_index]
+        item_l = links[n].split("/")
+        item = item_l[item_l.index("itm")+1]
             
         soup = FastSoup(p.text) 
         span = soup.find('span', class_='vi-acc-del-range')
@@ -72,25 +62,19 @@ def main(kws,ipg,pgn):
         except Exception as e: 
             print(e)
             pass
+        n += 1 #check needed: does n+1 skip when excpetion pass?
         
-        n += 1
-    
     Q.put(itms)
     #print("--- %s seconds ---" % (time.time() - start_time1))
-
     
 Q = Queue()
 
-
 kws = "iphone"#input("type keywords here: ")
 start_time = time.time()
-ipg = 25
-pgs = 10
 
 processes = []
-
-for pgn in range(pgs):
-    p = multiprocessing.Process(target = main,args = (kws, ipg, pgn+1))
+for pgn in range(10):
+    p = multiprocessing.Process(target = ebay,args = (kws, 25, pgn+1))
     p.start()
     processes.append(p)
 
@@ -99,15 +83,11 @@ for process in processes:
     process.join()
     items.update(Q.get())
     
-    
-
 sort_items = sorted(items.items(), key=lambda x: x[1])
-
 #for i in sort_items:
     #print(i[0],f"\n{i[1]}", "\n")
-    # add product link & try to filter results to make them relevant
+    
 print(len(items))
-#playsound.playsound('4.mp3', True)
 print("--- %s seconds ---" % (time.time() - start_time))
 
 
