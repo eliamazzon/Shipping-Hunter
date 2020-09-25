@@ -8,7 +8,7 @@ from fast_soup import FastSoup
 from multiprocessing import Process, Queue
 import multiprocessing
     
-def ebay(kws):    
+def main(kws):    
     def main(kws,ipg,pgn):
         #start_time1 = time.time()
         page = requests.get2str(f"https://www.ebay.com/sch/i.html?_nkw={kws}&_ipg={ipg}&_pgn={pgn}")
@@ -85,8 +85,4 @@ def ebay(kws):
         
     return items
 
-
-start_time = time.time()
-print(len(ebay("iphone")))
-print("--- %s seconds ---" % (time.time() - start_time))
 
